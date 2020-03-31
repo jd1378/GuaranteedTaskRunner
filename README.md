@@ -60,7 +60,7 @@ const {
 
 class SendMailTask extends GuaranteedTask {
 
-  start() {
+  async start() {
     this.sendMail(this.args);
   }
 
