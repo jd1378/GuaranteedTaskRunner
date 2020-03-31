@@ -75,7 +75,7 @@ taskRunner.addTask({ to: 'example@example.com', subject: 'ehmm', text: 'nothing'
 // should log the args
 ```
 
-Also it is possible to pass reference of your object to use in your tasks. I guess (really) like this :
+Also it is possible to pass reference of your object to use in your tasks. I *guess* like this :
 
 ```js
 const {
