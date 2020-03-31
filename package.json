@@ -1,0 +1,33 @@
+{
+  "name": "task-guarantee",
+  "version": "1.0.0",
+  "description": "guarantees a task to be done as said , even in case of failure",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "jest --runInBand --detectOpenHandles"
+  },
+  "repository": {
+    "type": "git",
+    "url": "nogit"
+  },
+  "keywords": [
+    "guarantee",
+    "task",
+    "job"
+  ],
+  "author": "javad mnjd",
+  "license": "MIT",
+  "devDependencies": {
+    "@types/jest": "^25.1.4",
+    "eslint": "^6.8.0",
+    "eslint-config-airbnb-base": "^14.1.0",
+    "eslint-plugin-import": "^2.20.1",
+    "eslint-plugin-prettier": "^3.1.2",
+    "jest": "^25.2.4",
+    "prettier": "^2.0.2"
+  },
+  "dependencies": {
+    "better-sqlite3": "^6.0.1",
+    "node-cleanup": "^2.1.2"
+  }
+}
