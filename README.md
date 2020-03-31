@@ -4,7 +4,7 @@ guarantees a task to run
 
 ## Warning
 
-this is experimental. use at your own risk.
+this is experimental. use at your own risk. the test coverage is not complete
 
 ## Purpose
 
@@ -38,6 +38,7 @@ I've tried to handle shutdowns gracefully with stopping the runner and closing t
 
 * The database that `TaskRunner` uses is created in current working directory of the process, inside `data` folder. The file name is based on the name of your Task class. so you should never run the same program twice (you can't cluster). The reason is you should never instantiate the `TaskRunner` with same Task class more than once because the database it uses will have the same name and can cause conflict.
 * Make sure the args is simple and possible to stringify with `JSON.stringify()`
+* Due to buggy behaviour of javascript's timeout function, do not use delays above ~ 800-900 seconds (Do if you are sure what you are doing).
 
 ## usage
 
@@ -58,18 +59,13 @@ const {
 } = require('task-guarantee');
 
 class SendMailTask extends GuaranteedTask {
-  constructor(options) {
-    super(options);
-    const { args } = options;
-    this.args = args;
-  }
 
   async start() {
-    await this.sendMail(args);
+    await this.sendMail(this.args);
   }
 
-  sendMail(args) {
-    console.log(JSON.stringify(args));
+  sendMail() {
+    console.log(this.args);
   }
 }
 
@@ -91,11 +87,6 @@ const MailService = require('./mail.service');
 const mservice = new MailService();
 
 class SendMailTask extends GuaranteedTask {
-  constructor(options) {
-    super(options);
-    const { args } = options;
-    this.args = args;
-  }
 
   async start() {
     // this.dependency = mservice
@@ -108,3 +99,33 @@ const taskRunner = new TaskRunner({ Task: SendMailTask, dependency: mservice });
 taskRunner.start();
 taskRunner.addTask({ to: 'example@example.com', subject: 'ehmm', text: 'nothing' });
 ```
+
+## API
+
+### TaskRunner (options)
+
+```js
+options = {
+  Task, // class
+  dependency = null,
+  runConditions = [], // array of functions that returns or resolves to true or false (global run condition , e.g. internet)
+  conditionCheckRate = 10 * 1000, // execute `runConditions` functions every x milliseconds
+  taskFailureDelay = 10 * 1000 // restarts the task after x milliseconds after failure
+}
+```
+
+### GuaranteedTask
+
+#### props
+
+* `id` - task id in database
+* `args` - the arguments passed to the task
+* `dependency` - the dependency passed to the task
+
+#### methods that you can override
+
+* start - when the task is executed for the **first** time
+* restart - when the task runs for the second time (or more) after failure. defaults to start if not overriden.
+* onFailure - when task throws an error inside start or restart.
+* onFinish - when task finishes executing start or restart.
+  

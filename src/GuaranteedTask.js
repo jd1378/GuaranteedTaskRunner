@@ -1,6 +1,8 @@
 class GuaranteedTask {
-  constructor({ id = null }) {
+  constructor({ id = null, args, dependency = null }) {
     this.id = id;
+    this.args = args;
+    this.dependency = dependency;
     this.attempt = 0;
   }
 

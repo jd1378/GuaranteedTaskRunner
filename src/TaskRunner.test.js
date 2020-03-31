@@ -26,14 +26,8 @@ function wait(ms) {
 const mock = jest.fn();
 
 class LongRunningTask extends GuaranteedTask {
-  constructor(options) {
-    super(options);
-    const { args } = options;
-    this.waitDuration = args;
-  }
-
   async start() {
-    await wait(this.waitDuration);
+    await wait(this.args);
     mock('ran');
   }
 }

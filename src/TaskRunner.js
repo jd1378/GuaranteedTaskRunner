@@ -44,9 +44,6 @@ class TaskRunner {
    * @param {Number} options.conditionCheckRate
    * rate of running checks in milliseconds
    *
-   * @param {Number} options.delay
-   * delay in milliseconds when run conditions are not met.
-   *
    * @param {Number} options.taskFailureDelay
    * delay in milliseconds to restart the task when it fails.
    */
@@ -55,12 +52,10 @@ class TaskRunner {
     dependency = null,
     runConditions = [],
     conditionCheckRate = 10 * 1000,
-    delay = 300 * 1000,
     taskFailureDelay = 10 * 1000,
   }) {
     this.Task = Task;
     this.dependency = dependency;
-    this.delay = delay;
     this.taskFailureDelay = taskFailureDelay;
     this.removeTaskFromDb = this.removeTaskFromDb.bind(this);
     this.runningTasks = new Map();
