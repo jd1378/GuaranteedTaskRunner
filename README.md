@@ -49,6 +49,7 @@ yarn add task-guarantee
 ```
 
 then
+
 ```js
 // This is an example only.
 // Only to show how the runner works.
