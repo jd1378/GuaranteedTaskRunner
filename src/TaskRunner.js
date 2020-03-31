@@ -73,15 +73,17 @@ class TaskRunner {
     });
     // gracefully shutdown when needed
     let cleanedUp = false;
+    let cleaningUp = false;
     nodeCleanup((exitCode, signal) => {
       if (signal) {
         if (cleanedUp) {
           return true;
         }
+        if (cleaningUp) return false;
+        cleaningUp = true;
         this.stop().then(() => {
           this.closeDb();
           cleanedUp = true;
-          process.kill(process.id, signal);
         });
         return false;
       }

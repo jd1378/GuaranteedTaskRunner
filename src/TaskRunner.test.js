@@ -1,23 +1,7 @@
 const fs = require('fs');
 const path = require('path');
-const nodeCleanup = require('node-cleanup');
 const GuaranteedTask = require('./GuaranteedTask');
 const TaskRunner = require('./TaskRunner');
-
-const isWin = process.platform === 'win32';
-
-// prevent exit once for mocking
-let stoppedOnce = false;
-nodeCleanup((exitCode, signal) => {
-  if (signal) {
-    if (stoppedOnce) {
-      return true;
-    }
-    stoppedOnce = true;
-    return false;
-  }
-  return true;
-});
 
 function deleteFolderRecursive(pathArg) {
   let files = [];
@@ -177,33 +161,31 @@ describe('TaskRunner', () => {
     });
   });
 
-  if (!isWin) {
-    it('should shut down gracefully', async () => {
-      const taskRunner = new TaskRunner(
-        { Task: LongRunningTask },
-      );
-      await taskRunner.start();
-      taskRunner.addTask(1000);
-      process.kill(process.pid, 'SIGINT');
-      expect(mock).toBeCalledTimes(1);
-      const waitForStop = () => new Promise((resolve) => {
-        const isStopped = () => !taskRunner.running && !taskRunner.stopping;
-        const doCheck = () => {
-          setTimeout(() => {
-            if (isStopped()) {
-              resolve();
-            } else {
-              doCheck();
-            }
-          }, 100);
-        };
-        doCheck();
-      });
-      await waitForStop();
-      expect(taskRunner.running).toBeFalsy();
-
-      // cleanup
-      taskRunner.closeDb();
+  it('should shut down gracefully', async () => {
+    const taskRunner = new TaskRunner(
+      { Task: LongRunningTask },
+    );
+    await taskRunner.start();
+    taskRunner.addTask(1000);
+    process.emit('SIGTERM', 'SIGTERM');
+    const waitForStop = () => new Promise((resolve) => {
+      const isStopped = () => !taskRunner.running && !taskRunner.stopping;
+      const doCheck = () => {
+        setTimeout(() => {
+          if (isStopped()) {
+            resolve();
+          } else {
+            doCheck();
+          }
+        }, 100);
+      };
+      doCheck();
     });
-  }
+    await waitForStop();
+    expect(mock).toBeCalledTimes(1);
+    expect(taskRunner.running).toBeFalsy();
+
+    // cleanup
+    taskRunner.closeDb();
+  });
 });
