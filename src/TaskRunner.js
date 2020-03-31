@@ -41,6 +41,9 @@ class TaskRunner {
    * functions can be async or return promise.
    * Note that this is the global run conditions for all tasks
    *
+   * @param {Number} options.conditionCheckRate
+   * rate of running checks in milliseconds
+   *
    * @param {Number} options.delay
    * delay in milliseconds when run conditions are not met.
    *

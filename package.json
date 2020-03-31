@@ -1,7 +1,7 @@
 {
   "name": "task-guarantee",
   "version": "1.0.0",
-  "description": "guarantees a task to be done as said , even in case of failure",
+  "description": "guarantees a task to run",
   "main": "src/index.js",
   "scripts": {
     "test": "jest --runInBand --detectOpenHandles"
