@@ -1,25 +1,7 @@
+// @ts-nocheck
 /* eslint-disable max-classes-per-file */
-
-const fs = require('fs');
-const path = require('path');
-const GuaranteedTask = require('./GuaranteedTask');
-const TaskRunner = require('./TaskRunner');
-
-function deleteFolderRecursive(pathArg) {
-  let files = [];
-  if (fs.existsSync(pathArg)) {
-    files = fs.readdirSync(pathArg);
-    files.forEach((file) => {
-      const curPath = path.join(pathArg, file);
-      if (fs.lstatSync(curPath).isDirectory()) { // recurse
-        deleteFolderRecursive(curPath);
-      } else { // delete file
-        fs.unlinkSync(curPath);
-      }
-    });
-    fs.rmdirSync(pathArg);
-  }
-}
+const { deleteData, waitForNextTick } = require('./utils');
+const { GuaranteedTask, TaskRunner } = require('../src/index');
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -36,7 +18,7 @@ class LongRunningTask extends GuaranteedTask {
 
 describe('TaskRunner', () => {
   beforeEach(() => {
-    deleteFolderRecursive(path.join(process.cwd(), 'data'));
+    deleteData();
   });
 
   it('waits for running tasks to finish after calling stop', async () => {
@@ -50,6 +32,7 @@ describe('TaskRunner', () => {
     expect(mock).toBeCalledTimes(1);
 
     // cleanup
+    await taskRunner.stop();
     taskRunner.closeDb();
   });
 
@@ -77,7 +60,9 @@ describe('TaskRunner', () => {
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(3);
     expect(taskRunner.getAllTasksFromDb().length).toBe(0);
+
     // cleanup
+    await taskRunner.stop();
     taskRunner.closeDb();
   });
 
@@ -92,7 +77,9 @@ describe('TaskRunner', () => {
       taskRunner.addTask(0);
       await taskRunner.stop();
       expect(mock).toBeCalledTimes(1);
+
       // cleanup
+      await taskRunner.stop();
       taskRunner.closeDb();
     });
 
@@ -106,8 +93,9 @@ describe('TaskRunner', () => {
       expect(taskRunner.running).toBeFalsy();
       await taskRunner.addTask(0);
       expect(mock).toBeCalledTimes(0);
-      await taskRunner.stop();
+
       // cleanup
+      await taskRunner.stop();
       taskRunner.closeDb();
     });
 
@@ -128,7 +116,9 @@ describe('TaskRunner', () => {
         expect(taskRunner.running).toBeTruthy();
         await taskRunner.stop();
         expect(mock).toBeCalledTimes(1);
+
         // cleanup
+        await taskRunner.stop();
         taskRunner.closeDb();
       });
 
@@ -151,7 +141,9 @@ describe('TaskRunner', () => {
         await taskRunner.stop();
         expect(mock).toBeCalledTimes(1);
         expect(taskRunner.getAllTasksFromDb().length).toBe(0);
+
         // cleanup
+        await taskRunner.stop();
         taskRunner.closeDb();
       });
     });
@@ -182,10 +174,11 @@ describe('TaskRunner', () => {
     expect(taskRunner.running).toBeFalsy();
 
     // cleanup
+    await taskRunner.stop();
     taskRunner.closeDb();
   });
 
-  it('can use numbers, strings and objects as task args', async () => {
+  it('can use numbers, strings and simple objects as task args', async () => {
     const useArg = jest.fn();
 
     class ArgTask extends GuaranteedTask {
@@ -205,7 +198,11 @@ describe('TaskRunner', () => {
     expect(useArg).toBeCalledWith('arg');
 
     const someObj = { obj: 'a' };
+    await taskRunner.stop();
     await taskRunner.addTask(someObj);
+    await taskRunner.start();
+    await waitForNextTick();
+    await taskRunner.stop();
     expect(useArg).toBeCalledWith(someObj);
 
     // cleanup
