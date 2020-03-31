@@ -1,3 +1,5 @@
+/* eslint-disable max-classes-per-file */
+
 const fs = require('fs');
 const path = require('path');
 const GuaranteedTask = require('./GuaranteedTask');
@@ -180,6 +182,59 @@ describe('TaskRunner', () => {
     expect(taskRunner.running).toBeFalsy();
 
     // cleanup
+    taskRunner.closeDb();
+  });
+
+  it('can use numbers, strings and objects as task args', async () => {
+    const useArg = jest.fn();
+
+    class ArgTask extends GuaranteedTask {
+      start() {
+        useArg(this.args);
+      }
+    }
+
+    const taskRunner = new TaskRunner(
+      { Task: ArgTask },
+    );
+    await taskRunner.start();
+    await taskRunner.addTask(1000);
+    expect(useArg).toBeCalledWith(1000);
+
+    await taskRunner.addTask('arg');
+    expect(useArg).toBeCalledWith('arg');
+
+    const someObj = { obj: 'a' };
+    await taskRunner.addTask(someObj);
+    expect(useArg).toBeCalledWith(someObj);
+
+    // cleanup
+    await taskRunner.stop();
+    taskRunner.closeDb();
+  });
+
+
+  it('can use dependency', async () => {
+    const dependency = {
+      func: jest.fn(),
+    };
+
+    class DependableTask extends GuaranteedTask {
+      start() {
+        this.dependency.func(this.args);
+      }
+    }
+
+    const taskRunner = new TaskRunner(
+      { Task: DependableTask, dependency },
+    );
+    await taskRunner.start();
+    taskRunner.addTask('args');
+    expect(dependency.func).toBeCalledTimes(1);
+    expect(dependency.func).toBeCalledWith('args');
+
+    // cleanup
+    await taskRunner.stop();
     taskRunner.closeDb();
   });
 });
