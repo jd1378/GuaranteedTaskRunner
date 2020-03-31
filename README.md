@@ -64,8 +64,8 @@ class SendMailTask extends GuaranteedTask {
     await this.sendMail(this.args);
   }
 
-  sendMail() {
-    console.log(this.args);
+  sendMail(args) {
+    console.log(args);
   }
 }
 
