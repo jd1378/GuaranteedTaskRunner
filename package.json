@@ -8,12 +8,16 @@
   },
   "repository": {
     "type": "git",
-    "url": "nogit"
+    "url": "git@github.com:jd1378/GuaranteedTaskRunner.git"
   },
   "keywords": [
     "guarantee",
+    "guaranteed",
     "task",
-    "job"
+    "job",
+    "runner",
+    "run",
+    "task-runner"
   ],
   "author": "javad mnjd",
   "license": "MIT",
