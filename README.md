@@ -70,7 +70,7 @@ class SendMailTask extends GuaranteedTask {
 }
 
 const taskRunner = new TaskRunner({ Task: SendMailTask });
-taskRunner.start();
+taskRunner.start(); // don't forget to start the task runner
 taskRunner.addTask({ to: 'example@example.com', subject: 'ehmm', text: 'nothing' });
 // should log the args
 ```
@@ -90,15 +90,19 @@ class SendMailTask extends GuaranteedTask {
 
   async start() {
     // this.dependency = mservice
-    await this.dependency.sendMail(args);
+    await this.dependency.sendMail(this.args);
   }
 }
 
 const taskRunner = new TaskRunner({ Task: SendMailTask, dependency: mservice });
 
-taskRunner.start();
+taskRunner.start(); // don't forget to start the task runner
 taskRunner.addTask({ to: 'example@example.com', subject: 'ehmm', text: 'nothing' });
 ```
+
+## Notes
+
+After calling `start()`, the task runner stops and starts the task execution when condition changes internally. but if you call `stop()`, the execution will stop completely and you need to call `start()` to continue normally.
 
 ## API
 
@@ -106,13 +110,22 @@ taskRunner.addTask({ to: 'example@example.com', subject: 'ehmm', text: 'nothing'
 
 ```js
 options = {
-  Task, // class
+  Task, // your extended GuaranteedTask class
   dependency = null,
   runConditions = [], // array of functions that returns or resolves to true or false (global run condition , e.g. internet)
   conditionCheckRate = 10 * 1000, // execute `runConditions` functions every x milliseconds
   taskFailureDelay = 10 * 1000 // restarts the task after x milliseconds after failure
 }
 ```
+
+#### methods
+
+* `start()` - an async function that returns when the task runner is ready to run tasks.
+being async is the reason that task runner does not auto start when instantiated.
+because you may want to make sure it's ready.
+* `stop()` - stops the task runner completely.
+* `closeDb()` - if you are done with the runner, make sure to close the db
+* `addTask(args)` - use this for adding task and running it as soon as possible.
 
 ### GuaranteedTask
 
@@ -124,8 +137,8 @@ options = {
 
 #### methods that you can override
 
-* start - when the task is executed for the **first** time
-* restart - when the task runs for the second time (or more) after failure. defaults to start if not overriden.
-* onFailure - when task throws an error inside start or restart.
-* onFinish - when task finishes executing start or restart.
+* `start` - when the task is executed for the **first** time
+* `restart` - when the task runs for the second time (or more) after failure. defaults to execute start if not overriden.
+* `onFailure` - when task throws an error inside start or restart. does nothing by default.
+* `onFinish` - when task finishes executing start or restart. does nothing by default.
   
