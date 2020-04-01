@@ -1,3 +1,6 @@
 **/.*
+data/
 examples/
 test/
+jest.config.js
+jsconfig.json
