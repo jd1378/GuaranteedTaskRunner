@@ -7,6 +7,9 @@
     "test": "jest --runInBand --detectOpenHandles",
     "example": "node ./examples/example1.js"
   },
+  "files": [
+    "src"
+  ],
   "repository": {
     "type": "git",
     "url": "git@github.com:jd1378/GuaranteedTaskRunner.git"
