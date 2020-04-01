@@ -189,14 +189,15 @@ class TaskRunner {
   async _start() {
     if (this.stopping || this.running) return;
     this.running = true;
-    this.getAllTasksFromDb().forEach((taskRow) => {
-      const task = new this.Task({
-        id: taskRow.id,
-        dependency: this.dependency,
-        args: JSON.parse(taskRow.args),
-      });
-      this.runTask(task);
-    });
+    await Promise.all(
+      this.getAllTasksFromDb()
+        .map((taskRow) => new this.Task({
+          id: taskRow.id,
+          dependency: this.dependency,
+          args: JSON.parse(taskRow.args),
+        }))
+        .map((task) => this.runTask(task)),
+    );
   }
 
   async start() {
