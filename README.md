@@ -23,7 +23,7 @@ The idea is to make your tasks as small as possible to make it possible to save 
 
 You create a class that extends the `GuaranteedTask` class provided by this package, then Create an instance of `TaskRunner` with definition of your class as constructor argument, along with other options.
 
-Then you only tell TaskRunner when you need to run a task and it runs the task. Normally it should only run A task once, however it is possible that the task run more than once , it should be rare though.
+Then you only tell TaskRunner when you need to run a task and it runs the task. Normally it should only run a task once, however it is possible that the task run more than once , it should be rare though.
 
 The conditions where it may run more than once, those that come to my mind are:
 
