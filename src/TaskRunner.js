@@ -8,21 +8,7 @@ const path = require('path');
 const Database = require('better-sqlite3');
 const nodeCleanup = require('node-cleanup');
 const ConditionRunner = require('./ConditionRunner');
-
-function defer() {
-  let res;
-  let rej;
-
-  const promise = new Promise((resolve, reject) => {
-    res = resolve;
-    rej = reject;
-  });
-
-  promise.resolve = res;
-  promise.reject = rej;
-
-  return promise;
-}
+const defer = require('./defer');
 
 class TaskRunner {
   /**
@@ -46,6 +32,9 @@ class TaskRunner {
    *
    * @param {Number} options.taskFailureDelay
    * delay in milliseconds to restart the task when it fails.
+   *
+   * @param {Number} options.dbOptions
+   * options to pass to better-sqlite3
    */
   constructor({
     Task,
@@ -53,6 +42,7 @@ class TaskRunner {
     runConditions = [],
     conditionCheckRate = 10 * 1000,
     taskFailureDelay = 10 * 1000,
+    dbOptions,
   }) {
     this.Task = Task;
     this.dependency = dependency;
@@ -61,7 +51,7 @@ class TaskRunner {
     this.runningTasks = new Map();
     this.running = false;
     this.stopping = false;
-    this.setupDb();
+    this.setupDb(dbOptions);
 
     this.conditionRunner = new ConditionRunner({
       functions: runConditions,
@@ -204,12 +194,12 @@ class TaskRunner {
     await this.conditionRunner.start();
   }
 
-  setupDb() {
+  setupDb(options) {
     const dataDir = path.join(process.cwd(), 'data');
     if (!fs.existsSync(dataDir)) {
       fs.mkdirSync(dataDir);
     }
-    this.db = new Database(path.join(process.cwd(), 'data', `${this.Task.name}.sqlite3`));
+    this.db = new Database(path.join(process.cwd(), 'data', `${this.Task.name}.sqlite3`), options);
     this.db.pragma('journal_mode = WAL');
     this.db
       .prepare(`

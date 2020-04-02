@@ -1,6 +1,5 @@
 // @ts-nocheck
 /* eslint-disable max-classes-per-file */
-const { deleteData } = require('./utils');
 const { GuaranteedTask, TaskRunner } = require('../src/index');
 
 function wait(ms) {
@@ -17,15 +16,11 @@ class LongRunningTask extends GuaranteedTask {
 }
 
 describe('TaskRunner', () => {
-  beforeEach(() => {
-    deleteData();
-  });
-
   describe('general', () => {
     let taskRunner;
     beforeEach(() => {
       taskRunner = new TaskRunner(
-        { Task: LongRunningTask },
+        { Task: LongRunningTask, dbOptions: { memory: true } },
       );
     });
     afterEach(async () => {
@@ -87,7 +82,9 @@ describe('TaskRunner', () => {
     let taskRunner;
     beforeEach(() => {
       taskRunner = new TaskRunner(
-        { Task: LongRunningTask, runConditions: [fakeCondtionChecker], conditionCheckRate: 100 },
+        {
+          Task: LongRunningTask, runConditions: [fakeCondtionChecker], conditionCheckRate: 100, dbOptions: { memory: true },
+        },
       );
       someCondtion.val = true;
     });
@@ -159,7 +156,7 @@ describe('TaskRunner', () => {
     let taskRunner;
     beforeEach(() => {
       taskRunner = new TaskRunner(
-        { Task: ArgTask },
+        { Task: ArgTask, dbOptions: { memory: true } },
       );
     });
     afterEach(async () => {
@@ -199,7 +196,7 @@ describe('TaskRunner', () => {
     let taskRunner;
     beforeEach(() => {
       taskRunner = new TaskRunner(
-        { Task: DependableTask, dependency },
+        { Task: DependableTask, dependency, dbOptions: { memory: true } },
       );
     });
     afterEach(async () => {

@@ -4,7 +4,7 @@
   "description": "guarantees a task to run",
   "main": "src/index.js",
   "scripts": {
-    "test": "jest --runInBand --detectOpenHandles",
+    "test": "jest",
     "example": "node ./examples/example1.js"
   },
   "files": [
