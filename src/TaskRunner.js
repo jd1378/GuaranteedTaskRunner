@@ -3,21 +3,17 @@
  * @typedef {import('./GuaranteedTask')} GuaranteedTask
  */
 
-const fs = require('fs');
-const path = require('path');
-const Database = require('better-sqlite3');
 const nodeCleanup = require('node-cleanup');
+const DB = require('./DB');
 const ConditionRunner = require('./ConditionRunner');
 const defer = require('./defer');
 
 class TaskRunner {
   /**
-   * Define the task, give the args and it guarantees to run.
-   *
    * @param {Object} options
-   * @param {GuaranteedTask} options.Task
-   * Class to use when constructing task.
-   * Must extend Guaranteed Task.
+   *
+   * @param {Array<GuaranteedTask>} options.Tasks
+   * an array containing all classes that this runner gonna use
    *
    * @param {*} options.dependency
    * possible dependency that is needed during a task
@@ -27,35 +23,29 @@ class TaskRunner {
    * functions can be async or return promise.
    * Note that this is the global run conditions for all tasks
    *
-   * @param {Number} options.conditionCheckRate
-   * rate of running checks in milliseconds
+   * @param {Number} [options.conditionCheckRate]
+   * rate of running checks in milliseconds. default 10 sec.
    *
-   * @param {Number} options.taskFailureDelay
-   * delay in milliseconds to restart the task when it fails.
+   * @param {Number} [options.taskFailureDelay]
+   * delay in milliseconds to restart the task when it fails. default 10 sec.
    *
-   * @param {Number} options.dbOptions
-   * options to pass to better-sqlite3
+   * @param {Object} options.dbOptions
+   * options to pass to better-sqlite3. you can also pass "name" for db name
    */
-  constructor({
-    Task,
-    dependency = null,
-    runConditions = [],
-    conditionCheckRate = 10 * 1000,
-    taskFailureDelay = 10 * 1000,
-    dbOptions,
-  }) {
-    this.Task = Task;
-    this.dependency = dependency;
-    this.taskFailureDelay = taskFailureDelay;
-    this.removeTaskFromDb = this.removeTaskFromDb.bind(this);
+  constructor(options = {}) {
+    this.Tasks = options.Tasks;
+    this.dependency = options.dependency;
+    this.taskFailureDelay = options.taskFailureDelay || 10 * 1000;
     this.runningTasks = new Map();
+    this.taskImmediates = new Map();
     this.running = false;
     this.stopping = false;
-    this.setupDb(dbOptions);
-
+    // setup db
+    this.db = new DB(options.dbOptions);
+    // setup condtion checker
     this.conditionRunner = new ConditionRunner({
-      functions: runConditions,
-      rate: conditionCheckRate,
+      functions: options.runConditions,
+      rate: options.conditionCheckRate,
       startHandle: this._start.bind(this),
       stopHandle: this._stop.bind(this),
     });
@@ -70,8 +60,9 @@ class TaskRunner {
         if (cleaningUp) return false;
         cleaningUp = true;
         this.stop().then(() => {
-          this.closeDb();
+          this.db.close();
           cleanedUp = true;
+          // process.kill(process.pid, signal);
         });
         return false;
       }
@@ -81,42 +72,94 @@ class TaskRunner {
 
   /**
    * Adds task to db and runs it
+   * @param {GuaranteedTask} Task - task to run
    * @param {*} args
    */
-  async addTask(args) {
-    const id = this.insertTask(args);
-    const task = new this.Task({ id, dependency: this.dependency, args });
-    await this.runTask(task);
+  add(Task, args, planList = []) {
+    planList.push({ taskName: Task.name, args });
+    return {
+      then: (NextTask, nextTaskArgs) => this.add(NextTask, nextTaskArgs, planList),
+      exec: () => this._executePlan(planList),
+    };
+  }
+
+  /**
+   * @description
+   * quick explain:
+   * the last planned task gets inserted first,
+   * the id and its name gets inserted with the task before it,
+   * and so on
+   *
+   * till the last plan which is the top parent task gets inserted with has_parent as null
+   * @param {Array} planList
+   */
+  _executePlan(planList) {
+    let prevTaskId = null;
+    let plan;
+    do {
+      plan = planList.pop();
+      const hasParent = planList.length !== 0;
+      const { lastInsertRowid } = this.db.insertTask(
+        plan.taskName,
+        plan.args ? JSON.stringify(plan.args) : null,
+        prevTaskId,
+        hasParent ? 1 : null,
+      );
+      if (hasParent) {
+        // don't set when it't top parent, to use for running the task
+        prevTaskId = lastInsertRowid;
+      } else {
+        plan.id = lastInsertRowid;
+      }
+    } while (planList.length);
+    const TheTask = this.Tasks.find((task) => task.name === plan.taskName);
+    if (TheTask) {
+      return this.run(new TheTask({
+        id: plan.id, dependency: this.dependency, args: plan.args, nextTaskId: prevTaskId,
+      }));
+    }
+    return Promise.reject(new Error("Task name not found in runner's Tasks array"));
   }
 
   /**
    * Runs task with given args
    * @param {GuaranteedTask} task
    */
-  async runTask(task) {
+  async run(task) {
     if (!this.running || this.stopping) return;
 
     if (this.conditionRunner.passes) {
       const currentAction = defer();
       this.runningTasks.set(task.id, currentAction);
       try {
+        let result;
         if (task.attemptNumber > 0) {
-          await task.restart();
+          result = await task.restart();
         } else {
-          await task.start();
+          result = await task.start();
         }
-        this.removeTaskFromDb(task);
-        await task.onFinish();
-        currentAction.resolve();
+        this.db.removeTask(task.id);
+        if (task.nextTaskId) {
+          this.db.clearTaskParentId(task.nextTaskId);
+          if (result) {
+            this.db.updateTaskArgsIfNull(task.nextTaskId, result);
+          }
+        }
+        // no guarantee for finish
+        task.onFinish();
         this.runningTasks.delete(task.id);
+        currentAction.resolve();
+        if (task.nextTaskId) {
+          this.taskImmediates.set(task.nextTaskId, setImmediate(() => this._runTaskId(task.nextTaskId)));
+        }
       } catch (err) {
-        const isRemoved = await task.onFailure(this.removeTaskFromDb);
+        const isRemoved = await task.onFailure(this.db.removeTaskRecursive.bind(this.db, task.id));
         if (!isRemoved) {
           task.increaseAttempt();
-          this.increaseTaskAttempt(task.id);
+          this.db.increaseTaskAttempt(task.id);
           currentAction.resolve();
           if (this.running) {
-            setTimeout(() => this.runTask(task), this.taskFailureDelay);
+            this.taskImmediates.set(task.id, setImmediate(() => this.run(task), this.taskFailureDelay));
           }
         } else {
           currentAction.resolve();
@@ -125,31 +168,25 @@ class TaskRunner {
     }
   }
 
-  /**
-   * @param {GuaranteedTask} task
-   */
-  removeTaskFromDb(task) {
-    this.taskRemoveStmt.run(task.id);
-  }
-
-  insertTask(args) {
-    const { lastInsertRowid } = this.taskInsertStmt.run(JSON.stringify(args));
-    return lastInsertRowid;
-  }
-
-  increaseTaskAttempt(id) {
-    this.taskIncreaseAttemptStmt.run(id);
-  }
-
-  /**
-   * @param {Number} taskid
-   */
-  getTaskFromDb(taskid) {
-    return this.taskGetStmt.get(taskid);
-  }
-
-  getAllTasksFromDb() {
-    return this.taskAllStmt.all();
+  async _runTaskId(id) {
+    if (!this.running || this.stopping) return Promise.resolve();
+    const taskInfo = this.db.getTaskInfo(id);
+    if (taskInfo) {
+      const TheTask = this.Tasks.find((task) => task.name === taskInfo.name);
+      if (TheTask) {
+        return this.run(new TheTask({
+          id,
+          dependency: this.dependency,
+          args: JSON.parse(taskInfo.args),
+          attempt: taskInfo.attempt,
+          nextTaskId: taskInfo.next_task_id,
+        }));
+      }
+      // this shouldn't happen if used properly
+      return Promise.reject(new Error("Task name not found in runner's Tasks array"));
+    }
+    // this should be caused by execution of chain continuing after runner was told to stop
+    return Promise.reject(new Error(`Task info for id ${id} not found`));
   }
 
   /**
@@ -159,10 +196,14 @@ class TaskRunner {
     if (!this.running || this.stopping) return Promise.resolve();
     this.running = false;
     this.stopping = true;
+    // clear task chain
+
+    this.taskImmediates.forEach((immediate) => clearImmediate(immediate));
+    this.taskImmediates.clear();
 
     return new Promise((resolve) => {
-      // give a gap to loop check for this.running
-      process.nextTick(() => {
+      // wait a loop
+      setImmediate(() => {
         Promise.all(Array.from(this.runningTasks.values())).then(() => {
           this.stopping = false;
           resolve();
@@ -176,48 +217,34 @@ class TaskRunner {
     return this._stop();
   }
 
+  /**
+   * @param {Array<GuaranteedTask>} Tasks
+   */
   async _start() {
     if (this.stopping || this.running) return;
     this.running = true;
     await Promise.all(
-      this.getAllTasksFromDb()
-        .map((taskRow) => new this.Task({
-          id: taskRow.id,
+      this.db.getAllRootTasks()
+        .map(
+          (taskRow) => ({
+            TaskClass: this.Tasks.find((Task) => Task.name === taskRow.name),
+            taskRow,
+          }),
+        )
+        .filter((data) => !!data.TaskClass)
+        .map((data) => new data.TaskClass({
+          id: data.taskRow.id,
           dependency: this.dependency,
-          args: JSON.parse(taskRow.args),
+          args: JSON.parse(data.taskRow.args),
+          attempt: data.taskRow.attempt,
+          nextTaskId: data.taskRow.next_task_id,
         }))
-        .map((task) => this.runTask(task)),
+        .map((task) => this.run(task)),
     );
   }
 
   async start() {
     await this.conditionRunner.start();
-  }
-
-  setupDb(options) {
-    const dataDir = path.join(process.cwd(), 'data');
-    if (!fs.existsSync(dataDir)) {
-      fs.mkdirSync(dataDir);
-    }
-    this.db = new Database(path.join(process.cwd(), 'data', `${this.Task.name}.sqlite3`), options);
-    this.db.pragma('journal_mode = WAL');
-    this.db
-      .prepare(`
-      CREATE TABLE IF NOT EXISTS "tasks" (
-        "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-        "args" TEXT DEFAULT '{}',
-        "attempt" INTEGER NOT NULL DEFAULT 0
-      );
-      `).run();
-    this.taskInsertStmt = this.db.prepare('INSERT INTO "tasks" (args) VALUES (?)');
-    this.taskRemoveStmt = this.db.prepare('DELETE FROM "tasks" WHERE id = ?');
-    this.taskGetStmt = this.db.prepare('SELECT * from "tasks" WHERE id = ?');
-    this.taskAllStmt = this.db.prepare('SELECT * from "tasks"');
-    this.taskIncreaseAttemptStmt = this.db.prepare('UPDATE "tasks" SET attempt = attempt + 1 WHERE id = ?');
-  }
-
-  closeDb() {
-    this.db.close();
   }
 }
 

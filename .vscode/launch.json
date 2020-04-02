@@ -7,14 +7,26 @@
     {
       "type": "node",
       "request": "launch",
+      "name": "Launch example",
+      "program": "${workspaceFolder}/examples/example1.js",
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    },
+    {
+      "type": "node",
+      "request": "launch",
       "name": "Jest Test",
       "program": "${workspaceFolder}\\node_modules\\jest\\bin\\jest",
-      "args": ["--runInBand", "--config=${workspaceFolder}\\jest.config.js"],
+      "args": ["--runInBand", "--config=${workspaceFolder}\\jest.config.js", 
+        "test/TaskRunner/taskchain.test.js"
+      ],
       "console": "integratedTerminal",
       "internalConsoleOptions": "neverOpen",
       "skipFiles": [
         "<node_internals>/**"
       ],
+      // "stopOnEntry": true
     }
   ]
 }

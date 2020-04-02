@@ -6,7 +6,7 @@ class ConditionRunner extends EventEmitter {
   /**
    *
    * @param {Array} functions
-   * @param {Number} rate
+   * @param {Number} [rate] - Time in milliseconds. Default 10 sec.
    * @param {Function} startHandle
    * @param {Function} stopHandle
    */
@@ -15,7 +15,7 @@ class ConditionRunner extends EventEmitter {
     this.startHandle = options.startHandle;
     this.stopHandle = options.stopHandle;
     this.passes = undefined;
-    this.functions = options.functions;
+    this.functions = options.functions || [];
     this.rate = options.rate || 10 * 1000;
     this.stopped = false;
   }
@@ -52,6 +52,7 @@ class ConditionRunner extends EventEmitter {
 
   stop() {
     this.stopped = true;
+    this.passes = undefined;
     clearTimeout(this._loopTimeout);
   }
 }

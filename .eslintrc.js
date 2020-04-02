@@ -10,6 +10,8 @@ module.exports = {
   plugins: ["prettier"],
   rules: {
     "class-methods-use-this": "off",
-    "no-plusplus": "off"
+    "no-plusplus": "off",
+    "no-restricted-syntax": "off",
+    "max-len": "off",
   }
 };

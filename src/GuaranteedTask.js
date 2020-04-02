@@ -1,9 +1,19 @@
 class GuaranteedTask {
-  constructor({ id = null, args, dependency = null }) {
-    this.id = id;
-    this.args = args;
-    this.dependency = dependency;
-    this.attempt = 0;
+  /**
+   * @param {Object} options
+   * @param {Number} options.id
+   * @param {Object} options.args
+   * @param {Numebr} options.nextTaskId
+   * @param {Numebr} [options.attempt] = 0
+   * @param {*} options.dependency
+   */
+  constructor(options = {}) {
+    this.id = options.id;
+    this.args = options.args;
+    this.name = this.constructor.name;
+    this.nextTaskId = options.nextTaskId;
+    this.dependency = options.dependency;
+    this.attempt = options.attempt || 0;
   }
 
   increaseAttempt() {

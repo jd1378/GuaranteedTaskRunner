@@ -31,6 +31,24 @@ function waitForNextTick() {
   });
 }
 
+function doLoop() {
+  return new Promise((resolve) => {
+    setImmediate(() => resolve());
+  });
+}
+
+async function waitForNextLoop(count = 1) {
+  for (let i = 0; i < count; i++) {
+    // the wait loop is intentional
+    // eslint-disable-next-line no-await-in-loop
+    await doLoop();
+  }
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 module.exports = {
-  deleteData, deleteFolderRecursive, getDataFolderPath, waitForNextTick,
+  deleteData, waitForNextLoop, deleteFolderRecursive, getDataFolderPath, waitForNextTick, wait,
 };
