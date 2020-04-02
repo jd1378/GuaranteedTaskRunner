@@ -6,16 +6,17 @@ class ConditionRunner extends EventEmitter {
   /**
    *
    * @param {Array} functions
+   * @param {Number} rate
+   * @param {Function} startHandle
+   * @param {Function} stopHandle
    */
-  constructor({
-    functions, rate = 10 * 1000, startHandle, stopHandle,
-  }) {
+  constructor(options) {
     super();
-    this.startHandle = startHandle;
-    this.stopHandle = stopHandle;
+    this.startHandle = options.startHandle;
+    this.stopHandle = options.stopHandle;
     this.passes = undefined;
-    this.functions = functions;
-    this.rate = rate;
+    this.functions = options.functions;
+    this.rate = options.rate || 10 * 1000;
     this.stopped = false;
   }
 
