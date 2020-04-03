@@ -79,6 +79,10 @@ class TaskRunner {
   add(Task, args, planList = []) {
     planList.push({ taskName: Task.name, args });
     return {
+      /**
+       * @param {GuaranteedTask} NextTask
+       * @param {*} nextTaskArgs
+       */
       then: (NextTask, nextTaskArgs) => this.add(NextTask, nextTaskArgs, planList),
       exec: () => this._executePlan(planList),
     };
