@@ -18,11 +18,16 @@
     "guarantee",
     "guaranteed",
     "task",
+    "tasks",
     "job",
     "runner",
     "run",
     "task-runner",
-    "taskRunner"
+    "task-management",
+    "task-scheduler",
+    "task-queue",
+    "retry-strategies",
+    "retry"
   ],
   "author": "javad mnjd",
   "license": "MIT",
