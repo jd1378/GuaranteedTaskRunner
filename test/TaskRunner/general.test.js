@@ -48,28 +48,6 @@ describe('general', () => {
     expect(mock).toBeCalledTimes(3);
     expect(taskRunner.db.getAllTasks().length).toBe(0);
   });
-
-  it('should shut down gracefully', async () => {
-    await taskRunner.start();
-    taskRunner.add(WaitTask, 1000).exec();
-    process.emit('SIGTERM', 'SIGTERM');
-    const waitForStop = () => new Promise((resolve) => {
-      const isStopped = () => !taskRunner.running && !taskRunner.stopping;
-      const doCheck = () => {
-        setTimeout(() => {
-          if (isStopped()) {
-            resolve();
-          } else {
-            doCheck();
-          }
-        }, 100);
-      };
-      doCheck();
-    });
-    await waitForStop();
-    expect(mock).toBeCalledTimes(1);
-    expect(taskRunner.running).toBeFalsy();
-  });
 });
 
 

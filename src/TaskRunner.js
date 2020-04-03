@@ -62,7 +62,7 @@ class TaskRunner {
         this.stop().then(() => {
           this.db.close();
           cleanedUp = true;
-          // process.kill(process.pid, signal);
+          process.kill(process.pid, signal);
         });
         return false;
       }

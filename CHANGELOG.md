@@ -1,5 +1,10 @@
 # Changelog
 
+## 2.0.1
+
+- resend the termination signal received after cleaning up
+- fixed related test
+
 ## 2.0.0 (LOTS of breaking changes)
 
 There's a lot of breaking changes, make sure you read the docs again carefully.
