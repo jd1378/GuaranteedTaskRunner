@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.2
+
+- small type hint fix and added related error
+
 ## 2.0.1
 
 - resend the termination signal received after cleaning up
