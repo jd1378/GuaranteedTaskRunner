@@ -32,7 +32,8 @@ class TaskRunner {
    * @param {Object} options.dbOptions
    * options to pass to better-sqlite3. you can also pass "name" for db name
    */
-  constructor(options = {}) {
+  constructor(options) {
+    if (!options) throw new Error('TaskRunner cannot work without options.');
     this.Tasks = options.Tasks;
     this.dependency = options.dependency;
     this.taskFailureDelay = options.taskFailureDelay || 10 * 1000;
