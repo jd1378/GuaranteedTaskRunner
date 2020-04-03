@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.0.3
+
+- type hint `.then()`'s first arg as `GuaranteedTask`
+
 ## 2.0.2
 
 - small type hint fix and added related error
