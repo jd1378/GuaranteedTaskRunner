@@ -38,7 +38,7 @@ I've tried to handle shutdowns gracefully with stopping the runner and closing t
 
 ## Current limitations
 
-* ~~The database that `TaskRunner` uses is created in current working directory of the process, inside `data` folder. The file name is based on the name of your Task class. so you should never run the same program twice (you can't cluster). The reason is you should never instantiate the `TaskRunner` with same Task class more than once because the database it uses will have the same name and can cause conflict.~~ It now creates a single database with default name of 'TaskRunner.sqlite3'. You can change this per Runner. All of the tasks are saved inside one table inside the database for chaining.
+* The database that `TaskRunner` uses is created in current working directory of the process, inside `data` folder. ~~The file name is based on the name of your Task class. so you should never run the same program twice (you can't cluster). The reason is you should never instantiate the `TaskRunner` with same Task class more than once because the database it uses will have the same name and can cause conflict.~~ As of v2.0.0 it creates a single database with default name of 'TaskRunner.sqlite3'. You can change this per Runner. All of the tasks are saved inside one table inside the database for chaining.
 * Make sure the args is simple and possible to stringify with `JSON.stringify()`
 * Due to buggy behaviour of javascript's timeout function, do not use delays above ~ 800-900 seconds (Do if you are sure what you are doing).
 
@@ -147,7 +147,7 @@ Note that tasks added using `then()` will only execute if the tasks before it ex
 ```js
 options = {
   Tasks, // Array of GuaranteedTask classes thats used by TaskRunner
-  dependency = null,
+  dependency,
   runConditions = [], // array of functions that returns or resolves to true or false (global run condition , e.g. internet)
   conditionCheckRate = 10 * 1000, // execute `runConditions` functions every x milliseconds
   taskFailureDelay = 10 * 1000 // restarts the task after x milliseconds after failure
