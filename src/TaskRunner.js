@@ -163,16 +163,20 @@ class TaskRunner {
           this.db.removeTaskRecursive(task.id);
           isRemoved = true;
         };
+
         await task.onFailure(err, removeTask);
-        if (!isRemoved) {
-          task.increaseAttempt();
-          this.db.increaseTaskAttempt(task.id);
+
+        if (isRemoved) {
           currentAction.resolve();
-          if (this.running) {
-            this.taskImmediates.set(task.id, setImmediate(() => this.run(task), this.taskFailureDelay));
-          }
-        } else {
-          currentAction.resolve();
+          return;
+        }
+
+        task.increaseAttempt();
+        this.db.increaseTaskAttempt(task.id);
+        currentAction.resolve();
+        // unnecessary check I guess
+        if (this.running) {
+          this.taskImmediates.set(task.id, setImmediate(() => this.run(task), this.taskFailureDelay));
         }
       }
     }
