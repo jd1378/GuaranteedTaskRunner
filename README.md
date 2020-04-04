@@ -181,6 +181,7 @@ because you may want to make sure it's ready.
 * `dependency` - the dependency passed to the task
 * `attempt` - current attempt at running the task
 * `nextTaskId`
+* `taskRunner` - the task runner instance that is running this task
 
 #### methods that you can override
 

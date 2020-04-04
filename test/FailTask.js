@@ -9,7 +9,6 @@ function FailTaskClass(mock) {
 
     async onFailure(error) {
       mock(error);
-      return false;
     }
   }
   return FailTask;

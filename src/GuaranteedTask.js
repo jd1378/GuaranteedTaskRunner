@@ -6,6 +6,7 @@ class GuaranteedTask {
    * @param {Numebr} options.nextTaskId
    * @param {Numebr} [options.attempt] = 0
    * @param {*} options.dependency
+   * @param {import('./TaskRunner')} options.taskRunner
    */
   constructor(options = {}) {
     this.id = options.id;
@@ -13,6 +14,7 @@ class GuaranteedTask {
     this.name = this.constructor.name;
     this.nextTaskId = options.nextTaskId;
     this.dependency = options.dependency;
+    this.taskRunner = options.taskRunner;
     this.attempt = options.attempt || 0;
   }
 

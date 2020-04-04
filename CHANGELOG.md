@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.1.0
+
+Features:
+
+- TaskRunner instance is now also passed to the running tasks, so you can now add tasks during onFailure and normal operation. You can access the runner instance using `this.taskRunner` inside your tasks.
+- added corresponding test
+
 ## 3.0.0
 
 the reason behind breaking change is that error is more common as first arg, so i made this a breaking change by putting it there.

@@ -6,6 +6,8 @@ const mock = jest.fn();
 const WaitTask = require('../WaitTask')(mock);
 const NormalTask = require('../NormalTask')(mock);
 const FailTask = require('../FailTask')(mock);
+const LogTask = require('../LogTask');
+const FailAddTask = require('../FailAddTask')(mock);
 
 describe('general', () => {
   /**
@@ -14,7 +16,7 @@ describe('general', () => {
   let taskRunner;
   beforeEach(() => {
     taskRunner = new TaskRunner(
-      { Tasks: [WaitTask, NormalTask, FailTask], dbOptions: { memory: true } },
+      { Tasks: [WaitTask, NormalTask, FailTask, LogTask, FailAddTask], dbOptions: { memory: true }, dependency: taskRunner },
     );
     mock.mockClear();
   });
@@ -68,6 +70,21 @@ describe('general', () => {
     await taskRunner.start();
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(2);
+  });
+
+  it('can add another task on failure using the exposed taskRunner', async () => {
+    console.log = jest.fn();
+    await taskRunner.start();
+    taskRunner.add(FailAddTask, 'test error message').exec();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(new Error('test error message'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(1);
+    expect(console.log).toBeCalledWith('anotherran');
+    expect(taskRunner.db.getAllTasks().length).toBe(0);
   });
 });
 

@@ -120,7 +120,11 @@ class TaskRunner {
     const TheTask = this.Tasks.find((task) => task.name === plan.taskName);
     if (TheTask) {
       return this.run(new TheTask({
-        id: plan.id, dependency: this.dependency, args: plan.args, nextTaskId: prevTaskId,
+        id: plan.id,
+        dependency: this.dependency,
+        args: plan.args,
+        nextTaskId: prevTaskId,
+        taskRunner: this,
       }));
     }
     return Promise.reject(new Error("Task name not found in runner's Tasks array"));
@@ -194,6 +198,7 @@ class TaskRunner {
           args: JSON.parse(taskInfo.args),
           attempt: taskInfo.attempt,
           nextTaskId: taskInfo.next_task_id,
+          taskRunner: this,
         }));
       }
       // this shouldn't happen if used properly
@@ -252,6 +257,7 @@ class TaskRunner {
           args: JSON.parse(data.taskRow.args),
           attempt: data.taskRow.attempt,
           nextTaskId: data.taskRow.next_task_id,
+          taskRunner: this,
         }))
         .map((task) => this.run(task)),
     );
