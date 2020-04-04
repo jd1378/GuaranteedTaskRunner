@@ -33,13 +33,14 @@ class GuaranteedTask {
    * @param {function} removeTaskFromDB - a function that accepts a Task instance as parameter
    */
   // eslint-disable-next-line no-unused-vars
-  onFailure(removeTaskFromDB) {
-    return Promise.resolve(false);
+  onFailure(error, removeTaskFromDB) {
+    return Promise.resolve();
   }
 
   // eslint-disable-next-line no-unused-vars
-  onFinish() {
+  onFinish(result) {
     // Make sure you don't throw up ANY errors here. nothing. cause that would mess up your logic.
+    return Promise.resolve();
   }
 }
 

@@ -151,14 +151,19 @@ class TaskRunner {
           }
         }
         // no guarantee for finish
-        task.onFinish();
+        task.onFinish(result);
         this.runningTasks.delete(task.id);
         currentAction.resolve();
         if (task.nextTaskId) {
           this.taskImmediates.set(task.nextTaskId, setImmediate(() => this._runTaskId(task.nextTaskId)));
         }
       } catch (err) {
-        const isRemoved = await task.onFailure(this.db.removeTaskRecursive.bind(this.db, task.id));
+        let isRemoved = false;
+        const removeTask = () => {
+          this.db.removeTaskRecursive(task.id);
+          isRemoved = true;
+        };
+        await task.onFailure(err, removeTask);
         if (!isRemoved) {
           task.increaseAttempt();
           this.db.increaseTaskAttempt(task.id);

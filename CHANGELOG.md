@@ -1,5 +1,22 @@
 # Changelog
 
+## 3.0.0
+
+the reason behind breaking change is that error is more common as first arg, so i made this a breaking change by putting it there.
+
+Breaking Change:
+
+- `onFailure(removeTask: function)` method is changed to `onFailure(error: Error, removeTask: function)`
+
+Features:
+
+- result of the task execution is now also passed to onFinish
+- added more tests
+
+Usability Fix:
+
+- theres no need to return a boolean to decide if task was removed or not inside `onFailure()`, prior to this you had to return true if the task was removing it self and false if not.
+
 ## 2.0.3
 
 - type hint `.then()`'s first arg as `GuaranteedTask`

@@ -140,6 +140,10 @@ IMPORTANT: always call `exec()` after adding your tasks or it will do nothing.
 
 Note that tasks added using `then()` will only execute if the tasks before it execute successfully. If **Any** of the task in the chain fails, it will not run the rest. ***And If*** one of the tasks in the chain removes it self inside the `onFailure()` of the task, the rest of the chain gets removed from db as well.
 
+## Changelogs
+
+For changelogs checkout [here](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md)
+
 ## API
 
 ### TaskRunner (options)
@@ -179,8 +183,10 @@ because you may want to make sure it's ready.
 
 #### methods that you can override
 
-* `start` - when the task is executed for the **first** time
-* `restart` - when the task runs for the second time (or more) after failure. defaults to execute start if not overriden.
-* `onFailure` - when task throws an error inside start or restart. does nothing by default.
-* `onFinish` - when task finishes executing start or restart. does nothing by default. this method is for extra fancy work but there's no guarantee on this one.
+gets called:
+
+* `start()` - when the task is executed for the **first** time
+* `restart()` - when the task runs for the second time (or more) after failure. defaults to execute start if not overriden.
+* `onFailure(err, removeTaskChain)` - when task throws an error inside start or restart. does nothing by default.
+* `onFinish(execResult)` - when task finishes executing start or restart. does nothing by default. this method is for extra fancy work but there's no guarantee on this one. don't throw errors in this as it will mess up the logic.
   

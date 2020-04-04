@@ -10,9 +10,8 @@ function ChainTaskClass(mock) {
       return this.args + 1;
     }
 
-    async onFailure(removeTaskChain) {
+    async onFailure(error, removeTaskChain) {
       removeTaskChain();
-      return true;
     }
   }
   return ChainTask;

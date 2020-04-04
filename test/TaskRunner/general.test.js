@@ -5,6 +5,7 @@ const { GuaranteedTask, TaskRunner } = require('../../src/index');
 const mock = jest.fn();
 const WaitTask = require('../WaitTask')(mock);
 const NormalTask = require('../NormalTask')(mock);
+const FailTask = require('../FailTask')(mock);
 
 describe('general', () => {
   /**
@@ -13,7 +14,7 @@ describe('general', () => {
   let taskRunner;
   beforeEach(() => {
     taskRunner = new TaskRunner(
-      { Tasks: [WaitTask, NormalTask], dbOptions: { memory: true } },
+      { Tasks: [WaitTask, NormalTask, FailTask], dbOptions: { memory: true } },
     );
     mock.mockClear();
   });
@@ -47,6 +48,26 @@ describe('general', () => {
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(3);
     expect(taskRunner.db.getAllTasks().length).toBe(0);
+  });
+
+  it('passes error to onFailure', async () => {
+    await taskRunner.start();
+    taskRunner.add(FailTask, 'test error message').exec();
+    await taskRunner.stop();
+    expect(mock).toBeCalledWith(new Error('test error message'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+  });
+
+  it('retries a task on failure', async () => {
+    await taskRunner.start();
+    taskRunner.add(FailTask, 'test error message').exec();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(new Error('test error message'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(2);
   });
 });
 
