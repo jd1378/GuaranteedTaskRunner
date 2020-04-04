@@ -1,3 +1,5 @@
+/* eslint-disable no-unused-vars */
+
 class GuaranteedTask {
   /**
    * @param {Object} options
@@ -32,14 +34,17 @@ class GuaranteedTask {
 
   /**
    * Should always return true if removes the task, false otherwise
+   * @param {Error} error - The error raised by start() or restart() function
    * @param {function} removeTaskFromDB - a function that accepts a Task instance as parameter
    */
-  // eslint-disable-next-line no-unused-vars
   onFailure(error, removeTaskFromDB) {
     return Promise.resolve();
   }
 
-  // eslint-disable-next-line no-unused-vars
+  /**
+   * returned result by start() or restart()
+   * @param {*} result
+   */
   onFinish(result) {
     // Make sure you don't throw up ANY errors here. nothing. cause that would mess up your logic.
     return Promise.resolve();

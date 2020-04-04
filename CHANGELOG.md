@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.1
+
+- added jsdocs for `onFailure()`
+
 ## 3.1.0
 
 Features:
