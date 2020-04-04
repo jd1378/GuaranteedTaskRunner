@@ -5,6 +5,7 @@ guarantees a task (or task chain) to run
 ## Warning
 
 this is experimental. use at your own risk. the test coverage is not complete
+Review the [changelog](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md) after each release for details
 
 ## Purpose
 
