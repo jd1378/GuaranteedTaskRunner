@@ -8,6 +8,7 @@ const NormalTask = require('../NormalTask')(mock);
 const FailTask = require('../FailTask')(mock);
 const LogTask = require('../LogTask');
 const FailAddTask = require('../FailAddTask')(mock);
+const FailedAttemptsTask = require('../FailedAttemptsTask')(mock);
 
 describe('general', () => {
   /**
@@ -16,7 +17,7 @@ describe('general', () => {
   let taskRunner;
   beforeEach(() => {
     taskRunner = new TaskRunner(
-      { Tasks: [WaitTask, NormalTask, FailTask, LogTask, FailAddTask], dbOptions: { memory: true }, dependency: taskRunner },
+      { Tasks: [WaitTask, NormalTask, FailTask, LogTask, FailAddTask, FailedAttemptsTask], dbOptions: { memory: true }, dependency: taskRunner },
     );
     mock.mockClear();
   });
@@ -70,6 +71,21 @@ describe('general', () => {
     await taskRunner.start();
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(2);
+  });
+
+  it('increases task attempt on failure', async () => {
+    await taskRunner.start();
+    taskRunner.add(FailedAttemptsTask).exec();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(0);
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(mock).toBeCalledWith(1);
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(mock).toBeCalledWith(2);
   });
 
   it('can add another task on failure using the exposed taskRunner', async () => {
