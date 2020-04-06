@@ -135,7 +135,7 @@ taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask, 5).exec();
 
 ## Notes
 
-After calling `start()`, the task runner stops and starts the task execution when condition changes internally. but if you call `stop()`, the execution will stop completely and you need to call `start()` to continue normally.
+After calling `TaskRunner.start()`, the task runner stops and starts the task execution when condition changes internally. but if you call `TaskRunner.stop()`, the execution will stop completely and you need to call `TaskRunner.start()` to continue normally.
 
 IMPORTANT: always call `exec()` after adding your tasks or it will do nothing.
 
