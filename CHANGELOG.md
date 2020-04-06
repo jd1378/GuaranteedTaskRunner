@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.1.3
+
+- Important fix: Task delay on failure was not respected. it's now fixed
+
 ## 3.1.2
 
 - a bit better readme

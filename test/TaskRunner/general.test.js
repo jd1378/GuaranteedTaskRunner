@@ -1,6 +1,7 @@
 // @ts-nocheck
 /* eslint-disable max-classes-per-file */
 const { GuaranteedTask, TaskRunner } = require('../../src/index');
+const { wait } = require('../utils');
 
 const mock = jest.fn();
 const WaitTask = require('../WaitTask')(mock);
@@ -17,7 +18,9 @@ describe('general', () => {
   let taskRunner;
   beforeEach(() => {
     taskRunner = new TaskRunner(
-      { Tasks: [WaitTask, NormalTask, FailTask, LogTask, FailAddTask, FailedAttemptsTask], dbOptions: { memory: true }, dependency: taskRunner },
+      {
+        Tasks: [WaitTask, NormalTask, FailTask, LogTask, FailAddTask, FailedAttemptsTask], dbOptions: { memory: true }, dependency: taskRunner, taskFailureDelay: 3000,
+      },
     );
     mock.mockClear();
   });
@@ -71,6 +74,20 @@ describe('general', () => {
     await taskRunner.start();
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(2);
+  });
+
+  it('respects task failure delay option', async () => {
+    await taskRunner.start();
+    await taskRunner.add(FailTask, 'test error message').exec();
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(new Error('test error message'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+    await wait(2500);
+    expect(mock).toBeCalledTimes(1);
+    await wait(600);
+    expect(mock).toBeCalledTimes(2);
+    expect(mock).toBeCalledWith(new Error('test error message'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
   });
 
   it('increases task attempt on failure', async () => {

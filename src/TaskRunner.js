@@ -39,6 +39,7 @@ class TaskRunner {
     this.taskFailureDelay = options.taskFailureDelay || 10 * 1000;
     this.runningTasks = new Map();
     this.taskImmediates = new Map();
+    this.taskTimeouts = new Map();
     this.running = false;
     this.stopping = false;
     // setup db
@@ -180,7 +181,7 @@ class TaskRunner {
         currentAction.resolve();
         // unnecessary check I guess
         if (this.running) {
-          this.taskImmediates.set(task.id, setImmediate(() => this.run(task), this.taskFailureDelay));
+          this.taskTimeouts.set(task.id, setTimeout(() => this.run(task), this.taskFailureDelay));
         }
       }
     }
@@ -219,6 +220,9 @@ class TaskRunner {
 
     this.taskImmediates.forEach((immediate) => clearImmediate(immediate));
     this.taskImmediates.clear();
+    this.taskTimeouts.forEach((immediate) => clearTimeout(immediate));
+    this.taskTimeouts.clear();
+
 
     return new Promise((resolve) => {
       // wait a loop
