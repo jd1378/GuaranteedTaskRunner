@@ -1,20 +1,22 @@
-// @ts-nocheck
+/* eslint-disable @typescript-eslint/no-floating-promises */
 /* eslint-disable max-classes-per-file */
-const { TaskRunner } = require('../../src/index');
+import { TaskRunner } from '../../src/index';
+import CreateWaitTask from '../WaitTask';
 
 const mock = jest.fn();
-const WaitTask = require('../WaitTask')(mock);
+const WaitTask = CreateWaitTask(mock);
 
 describe('respects run conditions', () => {
   const someCondtion = { val: true };
   const fakeCondtionChecker = () => someCondtion.val;
-  let taskRunner;
+  let taskRunner: TaskRunner;
   beforeEach(() => {
-    taskRunner = new TaskRunner(
-      {
-        Tasks: [WaitTask], runConditions: [fakeCondtionChecker], conditionCheckRate: 100, dbOptions: { memory: true },
-      },
-    );
+    taskRunner = new TaskRunner({
+      Tasks: [WaitTask],
+      runConditions: [fakeCondtionChecker],
+      conditionCheckRate: 100,
+      dbOptions: { name: ':memory:' },
+    });
     someCondtion.val = true;
   });
   afterEach(async () => {
@@ -61,7 +63,8 @@ describe('respects run conditions', () => {
       expect(taskRunner.db.getAllTasks().length).toBe(1);
       expect(taskRunner.running).toBeFalsy();
       // change condition mid run
-      const conditionCheckDuration = () => new Promise((resolve) => setTimeout(resolve, 200));
+      const conditionCheckDuration = () =>
+        new Promise((resolve) => setTimeout(resolve, 200));
       someCondtion.val = true;
       await conditionCheckDuration();
       expect(taskRunner.running).toBeTruthy();

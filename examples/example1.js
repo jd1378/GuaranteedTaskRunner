@@ -1,6 +1,35 @@
-// @ts-nocheck
-const { GuaranteedTask, TaskRunner } = require('../src/index');
-const { deleteData } = require('../test/utils');
+// for running this you should first run `yarn build` to generate js files to `dist` folder.
+
+/* eslint-disable */
+const path = require('path');
+const fs = require('fs');
+const { GuaranteedTask, TaskRunner } = require('../dist/index');
+
+function getDataFolderPath() {
+  return path.join(process.cwd(), 'data');
+}
+
+function deleteFolderRecursive(pathArg) {
+  let files = [];
+  if (fs.existsSync(pathArg)) {
+    files = fs.readdirSync(pathArg);
+    files.forEach((file) => {
+      const curPath = path.join(pathArg, file);
+      if (fs.lstatSync(curPath).isDirectory()) {
+        // recurse
+        deleteFolderRecursive(curPath);
+      } else {
+        // delete file
+        fs.unlinkSync(curPath);
+      }
+    });
+    fs.rmdirSync(pathArg);
+  }
+}
+
+function deleteData() {
+  return deleteFolderRecursive(getDataFolderPath());
+}
 
 deleteData();
 

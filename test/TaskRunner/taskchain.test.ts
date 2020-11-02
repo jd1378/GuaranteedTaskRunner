@@ -1,20 +1,19 @@
-// @ts-nocheck
 /* eslint-disable max-classes-per-file */
-const { TaskRunner } = require('../../src/index');
-const { waitForNextLoop } = require('../utils');
+import { TaskRunner } from '../../src/index';
+import { waitForNextLoop } from '../utils';
+import CreateNormalTask from '../NormalTask';
+import CreateChainTask from '../ChainTask';
 
 const mock = jest.fn();
-const NormalTask = require('../NormalTask')(mock);
-const ChainTask = require('../ChainTask')(mock);
+const NormalTask = CreateNormalTask(mock);
+const ChainTask = CreateChainTask(mock);
 
-/**
- * @type {TaskRunner}
- */
-let taskRunner;
+let taskRunner: TaskRunner;
 beforeEach(() => {
-  taskRunner = new TaskRunner(
-    { Tasks: [ChainTask, NormalTask], dbOptions: { memory: true } },
-  );
+  taskRunner = new TaskRunner({
+    Tasks: [ChainTask, NormalTask],
+    dbOptions: { name: ':memory:' },
+  });
 });
 afterEach(async () => {
   await taskRunner.stop();
@@ -24,7 +23,12 @@ afterEach(async () => {
 describe('task chaining', () => {
   it('Runs all tasks of the chain', async () => {
     await taskRunner.start();
-    taskRunner.add(NormalTask, 'first').then(NormalTask, 'second').then(NormalTask, 'third').exec();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    taskRunner
+      .add(NormalTask, 'first')
+      .then(NormalTask, 'second')
+      .then(NormalTask, 'third')
+      .exec();
     await waitForNextLoop(5);
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(3);
@@ -35,6 +39,7 @@ describe('task chaining', () => {
 
   it('Passes args to the next', async () => {
     await taskRunner.start();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask).exec();
     await waitForNextLoop(5);
     await taskRunner.stop();
@@ -46,6 +51,7 @@ describe('task chaining', () => {
 
   it("doesn't pass args to the next if next task has args set", async () => {
     await taskRunner.start();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask, 5).exec();
     await waitForNextLoop(5);
     await taskRunner.stop();
@@ -57,6 +63,7 @@ describe('task chaining', () => {
 
   it('continues chain after restart', async () => {
     await taskRunner.start();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask).exec();
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
@@ -73,6 +80,7 @@ describe('task chaining', () => {
 
   it('continues chain properly with interruptions', async () => {
     await taskRunner.start();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
     taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask).exec();
     await taskRunner.stop();
     await waitForNextLoop(100);
@@ -87,7 +95,9 @@ describe('task chaining', () => {
 
   it('removes rest of the chain if a failed task removes itself', async () => {
     await taskRunner.start();
-    taskRunner.add(ChainTask, 1) // 1
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    taskRunner
+      .add(ChainTask, 1) // 1
       .then(ChainTask) // 2
       .then(ChainTask) // 3
       .then(ChainTask) // 4 and fail on this one

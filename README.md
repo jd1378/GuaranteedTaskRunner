@@ -2,10 +2,13 @@
 
 guarantees a task (or task chain) to run
 
-## Warning
+## Info
 
-this is experimental. use at your own risk. the test coverage is not complete
-Review the [changelog](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md) after each release for details
+You need at least node **v10** to run this. (better-sqlite3 v7 requirement)
+
+Since v4.0.0, Project is migrated to typescript. but still lacks the required tests and functionality to work under cluster mode. I may add the support in future. I've tried to keep the API the way it was. but a few breaking changes were introduced. you can check in [CHANGELOG](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md)
+
+Currently there's no support for limiting how many tasks can be run at the same time, but I may add support in future.
 
 ## Purpose
 
@@ -20,8 +23,6 @@ I needed something to do a chain of defined tasks as quickly as possible with be
 
 ## How this package does this
 
-First of all, the time to execute the idea was limited, so suggestions are welcome.
-
 The idea is to make your tasks as small as possible to make it possible to save the args to database to be able to recreate and execute them later. currently `better-sqlite3` is used for db stuff.
 
 You create a class that extends the `GuaranteedTask` class provided by this package, then Create an instance of `TaskRunner` with definition of your classes along with other options.
@@ -35,13 +36,12 @@ The conditions where it may run more than once, those that come to my mind are:
 
 `* you can make a task fail by throwing an Error inside start() function of your task, it will be cought in TaskRunner to determine failure`
 
-I've tried to handle shutdowns gracefully with stopping the runner and closing the db (using `node-cleanup`). still, there may be problems.
+I've tried to handle shutdowns gracefully with stopping the runner and closing the db (using `node-cleanup`). still, there may be problems (specially on windows).
 
 ## Current limitations
 
-* The database that `TaskRunner` uses is created in current working directory of the process, inside `data` folder. ~~The file name is based on the name of your Task class. so you should never run the same program twice (you can't cluster). The reason is you should never instantiate the `TaskRunner` with same Task class more than once because the database it uses will have the same name and can cause conflict.~~ As of v2.0.0 it creates a single database with default name of 'TaskRunner.sqlite3'. You can change this per Runner. All of the tasks are saved inside one table inside the database for chaining.
-* Make sure the args is simple and possible to stringify with `JSON.stringify()`
-* Due to buggy behaviour of javascript's timeout function, do not use delays above ~ 800-900 seconds (Do if you are sure what you are doing).
+* The database that `TaskRunner` uses is created in current working directory of the process, inside `data` folder. TaskRunner creates a single database with default name of 'TaskRunner.sqlite3'. You can change this per Runner using `options.dbOptions.name` when instantiating `TaskRunner`. All of the tasks are saved inside one table inside the database for chaining.
+* It is your responsibility to make sure the args is simple and possible to stringify with `JSON.stringify()`, otherwise you will run into unknown errors.
 
 ## usage
 
@@ -137,7 +137,7 @@ taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask, 5).exec();
 
 After calling `TaskRunner.start()`, the task runner stops and starts the task execution when condition changes internally. but if you call `TaskRunner.stop()`, the execution will stop completely and you need to call `TaskRunner.start()` to continue normally.
 
-IMPORTANT: always call `exec()` after adding your tasks or it will do nothing.
+**IMPORTANT**: always call `exec()` after adding your tasks or it will do nothing.
 
 Note that tasks added using `then()` will only execute if the tasks before it execute successfully. If **Any** of the task in the chain fails, it will not run the rest. ***And If*** one of the tasks in the chain removes it self inside the `onFailure()` of the task, the rest of the chain gets removed from db as well.
 
@@ -146,6 +146,8 @@ Note that tasks added using `then()` will only execute if the tasks before it ex
 For changelogs checkout [here](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md)
 
 ## API
+
+Since v4.0.0 is migrated to typescript, the usage should be easier. Still I give some description:
 
 ### TaskRunner (options)
 
@@ -168,9 +170,9 @@ options = {
 * `start()` - an async function that returns when the task runner is ready to run tasks.
 being async is the reason that task runner does not auto start when instantiated.
 because you may want to make sure it's ready.
-* `stop()` - stops the task runner completely.
-* `closeDb()` - if you are done with the runner, make sure to close the db
-* `add(Task, args) => { then(Task, [args]) , exec() }` - add Task first, then call exec() at the end to finalize it
+* `stop()` - stops the task runner completely. (doesn't close database)
+* `add(Task, args) => { then(Task, [args]) , exec() }` - add Task first, then call exec() at the end to insert into db and run it
+* `db.close()` - Closes the database connection. never call this unless you really want to get rid of the TaskRunner instance.
 
 ### GuaranteedTask
 
@@ -180,15 +182,15 @@ because you may want to make sure it's ready.
 * `args` - the arguments passed to the task
 * `dependency` - the dependency passed to the task
 * `attempt` - current attempt at running the task
-* `nextTaskId`
+* `nextTaskId` - task id of next task in database
 * `taskRunner` - the task runner instance that is running this task
 
 #### methods that you can override
 
-gets called:
+gets called - when:
 
 * `start()` - when the task is executed for the **first** time
-* `restart()` - when the task runs for the second time (or more) after failure. defaults to execute start if not overriden.
-* `onFailure(err, removeTaskChain)` - when task throws an error inside start or restart. does nothing by default.
-* `onFinish(execResult)` - when task finishes executing start or restart. does nothing by default. this method is for extra fancy work but there's no guarantee on this one. don't throw errors in this as it will mess up the logic.
+* `start(true)` - when the task runs for the second time (or more) after failure.
+* `onFailure(err, removeTaskChain)` - when task throws an error inside `start()`. does nothing by default.
+* `onFinish(execResult)` - when task finishes executing start or restart. does nothing by default. this method is for extra fancy work but there's no guarantee on this one. task runner does not await this and does not catch it's errors. please make sure you don't throw any errors in here.
   
