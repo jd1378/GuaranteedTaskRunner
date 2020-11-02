@@ -3,9 +3,9 @@
 ## 4.0.0
 
 - Changed project to typescript
-- there was a bug that would prevent restart() from being called on continues execution of tasks
-  since 4.0.0 there won't be a restart method anymore in GuaranteedTask
-  instead it's replaced with a boolean argument given to `start(retyring: boolean)` when attempt > 0
+- there was a bug that would prevent restart() from being called on continues execution of tasks.
+  In v4 there won't be a restart method anymore in GuaranteedTask,
+  Instead It's replaced with a boolean argument given to `start(retyring: boolean)` when attempt > 0
 - updated better-sqlite3 to v7
 - need at least node v10
 
