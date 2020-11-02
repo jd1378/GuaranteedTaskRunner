@@ -39,7 +39,7 @@ export default class TaskRunner {
 
   taskFailureDelay: number;
 
-  private runningTasks: Map<unknown, Deffered<void>>;
+  runningTasks: Map<unknown, Deffered<void>>;
 
   private taskImmediates: Map<unknown, NodeJS.Immediate>;
 
