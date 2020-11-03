@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.1
+
+- upgrade packages
+
 ## 4.0.0
 
 - Changed project to typescript
