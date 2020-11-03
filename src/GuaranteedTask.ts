@@ -7,8 +7,6 @@ export type GuaranteedTaskOptions = {
   id: number;
   /** arguments of task */
   args: unknown;
-  /** task name to use when inserting to database. defaults to constructor.name */
-  name?: string;
   /** id of next task if successful */
   nextTaskId: number;
   /** how many times this task has failed before */
@@ -37,7 +35,7 @@ export default abstract class GuaranteedTask {
   constructor(options: GuaranteedTaskOptions) {
     this.id = options.id;
     this.args = options.args;
-    this.name = options.name || this.constructor.name;
+    this.name = this.constructor.name;
     this.nextTaskId = options.nextTaskId;
     this.dependency = options.dependency;
     this.taskRunner = options.taskRunner;

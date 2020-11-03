@@ -1,5 +1,9 @@
 # Changelog
 
+## 4.0.2
+
+- remove name option from `TaskGuarantee` constructor options, because it will break functionality probably and was not intended.
+
 ## 4.0.1
 
 - upgrade packages
