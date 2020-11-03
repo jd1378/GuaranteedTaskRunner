@@ -3,17 +3,19 @@ import { GuaranteedTask, TaskRunner } from '../../src/index';
 import { wait } from '../utils';
 import LogTask from '../LogTask';
 import CreateWaitTask from '../WaitTask';
-import CreatFailTask from '../FailTask';
-import CreatFailAddTask from '../FailAddTask';
-import CreatNormalTask from '../NormalTask';
-import CreatFailedAttemptsTask from '../FailedAttemptsTask';
+import CreateFailTask from '../FailTask';
+import CreateFailAddTask from '../FailAddTask';
+import CreateNormalTask from '../NormalTask';
+import CreateFailedAttemptsTask from '../FailedAttemptsTask';
+import CreateFailRetrySuccessTask from '../FailRetrySuccessTask';
 
 const mock = jest.fn();
 const WaitTask = CreateWaitTask(mock);
-const NormalTask = CreatNormalTask(mock);
-const FailTask = CreatFailTask(mock);
-const FailAddTask = CreatFailAddTask(mock);
-const FailedAttemptsTask = CreatFailedAttemptsTask(mock);
+const NormalTask = CreateNormalTask(mock);
+const FailTask = CreateFailTask(mock);
+const FailAddTask = CreateFailAddTask(mock);
+const FailedAttemptsTask = CreateFailedAttemptsTask(mock);
+const FailRetrySuccessTask = CreateFailRetrySuccessTask(mock);
 
 describe('general', () => {
   let taskRunner: TaskRunner;
@@ -26,6 +28,7 @@ describe('general', () => {
         LogTask,
         FailAddTask,
         FailedAttemptsTask,
+        FailRetrySuccessTask,
       ],
       dbOptions: { name: ':memory:' },
       dependency: taskRunner,
@@ -119,6 +122,24 @@ describe('general', () => {
     await taskRunner.start();
     await taskRunner.stop();
     expect(mock).toBeCalledWith(2);
+  });
+
+  it('calls start() with `true` when attempt is more than 0', async () => {
+    await taskRunner.start();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    taskRunner.add(FailRetrySuccessTask, 'fail').exec();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(1);
+    expect(mock).toBeCalledWith(new Error('fail'));
+    expect(taskRunner.db.getAllTasks().length).toBe(1);
+    expect(taskRunner.db.getAllTasks()[0].attempt).toBe(1);
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(mock).toBeCalledTimes(2);
+    expect(mock).toBeCalledWith('yes');
+    await taskRunner.start();
+    await taskRunner.stop();
+    expect(taskRunner.db.getAllTasks().length).toBe(0);
   });
 
   it('can add another task on failure using the exposed taskRunner', async () => {
