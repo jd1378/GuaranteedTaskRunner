@@ -127,7 +127,7 @@ export default class DatabaseHandler {
 
   removeTaskRecursive(taskId: number): void {
     const task = this.getTask(taskId);
-    if (task.next_task_id) {
+    if (task && task.next_task_id) {
       this.removeTaskRecursive(task.next_task_id);
     }
     this.removeTask(taskId);

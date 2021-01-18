@@ -26,7 +26,7 @@ describe('respects run conditions', () => {
 
   it('runs task when conditon is met from start', async () => {
     await taskRunner.start();
-    taskRunner.add(WaitTask, 0).exec();
+    taskRunner.execute(WaitTask, 0);
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
   });
@@ -35,7 +35,7 @@ describe('respects run conditions', () => {
     someCondtion.val = false;
     await taskRunner.start();
     expect(taskRunner.running).toBeFalsy();
-    await taskRunner.add(WaitTask, 0).exec();
+    await taskRunner.execute(WaitTask, 0);
     expect(mock).toBeCalledTimes(0);
   });
 
@@ -43,7 +43,7 @@ describe('respects run conditions', () => {
     it('it runs tasks after condition becomes true manually', async () => {
       someCondtion.val = false;
       await taskRunner.start();
-      taskRunner.add(WaitTask, 0).exec();
+      taskRunner.execute(WaitTask, 0);
       await taskRunner.stop();
       expect(taskRunner.running).toBeFalsy();
       expect(mock).toBeCalledTimes(0);
@@ -58,7 +58,7 @@ describe('respects run conditions', () => {
     it('it runs the task after condition change automatically', async () => {
       someCondtion.val = false;
       await taskRunner.start();
-      await taskRunner.add(WaitTask, 0).exec();
+      await taskRunner.execute(WaitTask, 0);
       expect(mock).toBeCalledTimes(0);
       expect(taskRunner.db.getAllTasks().length).toBe(1);
       expect(taskRunner.running).toBeFalsy();

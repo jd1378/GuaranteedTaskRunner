@@ -1,5 +1,15 @@
 # Changelog
 
+## 5.0.0
+
+- BREAKING CHANGE: new API to use task runner, because in previous API it was easy to forget `.exec()` after adding tasks in a chain
+- `.add()` removed from TaskRunner
+- renamed previously private `.executePlan()` to `.execute()` and changed it's signiture for a new way to use task runner
+- Introduced TaskChain
+- fixed the bug that you couldn't await the chain execution
+- stopping more than once should return the same promise
+- starting more than once should return the same promise (report if it's not working as expected)
+
 ## 4.0.2
 
 - remove name option from `TaskGuarantee` constructor options, because it will break functionality probably and was not intended.

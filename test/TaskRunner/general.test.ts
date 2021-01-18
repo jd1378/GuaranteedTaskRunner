@@ -1,5 +1,5 @@
 /* eslint-disable max-classes-per-file */
-import { GuaranteedTask, TaskRunner } from '../../src/index';
+import { GuaranteedTask, TaskChain, TaskRunner } from '../../src/index';
 import { wait } from '../utils';
 import LogTask from '../LogTask';
 import CreateWaitTask from '../WaitTask';
@@ -44,7 +44,7 @@ describe('general', () => {
   it('waits for running tasks to finish after calling stop', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(WaitTask, 1000).exec();
+    taskRunner.execute(WaitTask, 1000);
     await taskRunner.stop();
     expect(taskRunner.running).toBeFalsy();
     expect(mock).toBeCalledTimes(1);
@@ -52,8 +52,8 @@ describe('general', () => {
 
   it('It removes finished tasks properly after finished', async () => {
     await taskRunner.start();
-    await taskRunner.add(WaitTask, 300).exec();
-    await taskRunner.add(NormalTask).exec();
+    await taskRunner.execute(WaitTask, 300);
+    await taskRunner.execute(NormalTask);
     expect(mock).toBeCalledTimes(2);
     expect(taskRunner.db.getAllTasks().length).toBe(0);
     expect(Array.from(taskRunner.runningTasks.entries()).length).toBe(0);
@@ -62,11 +62,11 @@ describe('general', () => {
   it('runs multiple tasks fine', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(WaitTask, 1).exec();
+    taskRunner.execute(WaitTask, 1);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(NormalTask).exec();
+    taskRunner.execute(NormalTask);
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(WaitTask, 100).exec();
+    taskRunner.execute(WaitTask, 100);
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(3);
     expect(taskRunner.db.getAllTasks().length).toBe(0);
@@ -75,7 +75,7 @@ describe('general', () => {
   it('passes error to onFailure', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(FailTask, 'test error message').exec();
+    taskRunner.execute(FailTask, 'test error message');
     await taskRunner.stop();
     expect(mock).toBeCalledWith(new Error('test error message'));
     expect(taskRunner.db.getAllTasks().length).toBe(1);
@@ -84,7 +84,7 @@ describe('general', () => {
   it('retries a task on failure', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(FailTask, 'test error message').exec();
+    taskRunner.execute(FailTask, 'test error message');
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
     expect(mock).toBeCalledWith(new Error('test error message'));
@@ -96,7 +96,7 @@ describe('general', () => {
 
   it('respects task failure delay option', async () => {
     await taskRunner.start();
-    await taskRunner.add(FailTask, 'test error message').exec();
+    await taskRunner.execute(FailTask, 'test error message');
     expect(mock).toBeCalledTimes(1);
     expect(mock).toBeCalledWith(new Error('test error message'));
     expect(taskRunner.db.getAllTasks().length).toBe(1);
@@ -111,7 +111,7 @@ describe('general', () => {
   it('increases task attempt on failure', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(FailedAttemptsTask).exec();
+    taskRunner.execute(FailedAttemptsTask);
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
     expect(mock).toBeCalledWith(0);
@@ -127,7 +127,7 @@ describe('general', () => {
   it('calls start() with `true` when attempt is more than 0', async () => {
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(FailRetrySuccessTask, 'fail').exec();
+    taskRunner.execute(FailRetrySuccessTask, 'fail');
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
     expect(mock).toBeCalledWith(new Error('fail'));
@@ -146,7 +146,7 @@ describe('general', () => {
     console.log = jest.fn();
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(FailAddTask, 'test error message').exec();
+    taskRunner.execute(FailAddTask, 'test error message');
     await taskRunner.stop();
     expect(mock).toBeCalledTimes(1);
     expect(mock).toBeCalledWith(new Error('test error message'));
@@ -174,28 +174,71 @@ describe('Task args', () => {
       dbOptions: { name: ':memory:' },
     });
   });
+
   afterEach(async () => {
     await taskRunner.stop();
     taskRunner.db.close();
   });
+
   it('can use numbers, strings and simple objects', async () => {
-    await taskRunner.add(ArgTask, 1000).exec(); // add to db
+    await taskRunner.execute(ArgTask, 1000); // add to db
     await taskRunner.start(); // run from db
     await taskRunner.stop(); // wait for it to finish
     expect(useArg).toBeCalledWith(1000);
   });
+
   it('can use strings', async () => {
-    await taskRunner.add(ArgTask, 'arg').exec(); // add to db
+    await taskRunner.execute(ArgTask, 'arg'); // add to db
     await taskRunner.start(); // run from db
     await taskRunner.stop(); // wait for it to finish
     expect(useArg).toBeCalledWith('arg');
   });
   it('can use simple objects', async () => {
     const someObj = { obj: 'a' };
-    await taskRunner.add(ArgTask, someObj).exec(); // add to db
+    await taskRunner.execute(ArgTask, someObj); // add to db
     await taskRunner.start(); // run from db
     await taskRunner.stop(); // wait for it to finish
     expect(useArg).toBeCalledWith(someObj);
+  });
+
+  it('can execute TaskChain with 1 task', async () => {
+    await taskRunner.execute(new TaskChain(ArgTask, 1000)); // add to db
+    await taskRunner.start(); // run from db
+    await taskRunner.stop(); // wait for it to finish
+    expect(useArg).toBeCalledWith(1000);
+  });
+
+  it('A Task can be awaited during run', async () => {
+    await taskRunner.start();
+    await taskRunner.execute(ArgTask, 1000); // wait for task to finish
+    await taskRunner.stop();
+    expect(useArg).toBeCalledWith(1000);
+  });
+
+  it('A TaskChain can be awaited during run', async () => {
+    await taskRunner.start();
+    await taskRunner.execute(new TaskChain(ArgTask, 1000).add(ArgTask, 2000)); // wait for chain to finish
+    await taskRunner.stop();
+    expect(useArg).toBeCalledWith(1000);
+    expect(useArg).toBeCalledWith(2000);
+  });
+
+  it('can execute TaskChain with more than 1 task (first form)', async () => {
+    await taskRunner.start();
+    await taskRunner.execute(
+      new TaskChain().add(ArgTask, 1000).add(ArgTask, 2000),
+    ); // wait for chain to finish
+    await taskRunner.stop();
+    expect(useArg).toBeCalledWith(1000);
+    expect(useArg).toBeCalledWith(2000);
+  });
+
+  it('can execute TaskChain with more than 1 task (second form)', async () => {
+    await taskRunner.start();
+    await taskRunner.execute(new TaskChain(ArgTask, 1000).add(ArgTask, 2000)); // wait for chain to finish
+    await taskRunner.stop();
+    expect(useArg).toBeCalledWith(1000);
+    expect(useArg).toBeCalledWith(2000);
   });
 });
 
@@ -226,7 +269,7 @@ describe('dependency option', () => {
   });
   it('task can use dependency', async () => {
     await taskRunner.start();
-    await taskRunner.add(DependableTask, 'args').exec();
+    await taskRunner.execute(DependableTask, 'args');
     expect(dependency.func).toBeCalledTimes(1);
     expect(dependency.func).toBeCalledWith('args');
   });

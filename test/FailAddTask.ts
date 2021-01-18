@@ -13,7 +13,7 @@ export default function FailAddTaskClass(
       mock(error);
       removeTask();
       // eslint-disable-next-line @typescript-eslint/no-floating-promises
-      this.taskRunner.add(LogTask, 'anotherran').exec();
+      this.taskRunner.execute(LogTask, 'anotherran');
     }
   }
   return FailAddTask;

@@ -25,11 +25,11 @@ describe('gracefull shutdown', () => {
 
     await taskRunner.start();
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    taskRunner.add(WaitTask, 1000).exec();
+    taskRunner.execute(WaitTask, 1000);
     await wait(100);
     process.emit('SIGTERM', 'SIGTERM');
     const waitForStop = () =>
-      new Promise((resolve) => {
+      new Promise<void>((resolve) => {
         const isStopped = () => !taskRunner.running && !taskRunner.stopping;
         const doCheck = () => {
           setTimeout(() => {

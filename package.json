@@ -1,6 +1,6 @@
 {
   "name": "task-guarantee",
-  "version": "4.0.2",
+  "version": "5.0.0",
   "description": "guarantees a task [chain] to run",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -9,7 +9,7 @@
     "test-dbg": "jest --detectOpenHandles",
     "build": "tsc",
     "lint": "eslint .",
-    "prepublishOnly": "npm test && npm run lint",
+    "prepublishOnly": "npm test build && npm test && npm run lint",
     "example": "node ./examples/example1.js"
   },
   "files": [

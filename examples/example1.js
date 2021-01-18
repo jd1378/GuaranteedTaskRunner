@@ -47,7 +47,7 @@ class DoLogTask extends GuaranteedTask {
 async function runExample() {
   const taskRunner = new TaskRunner({ Tasks: [DoLogTask] });
   await taskRunner.start();
-  taskRunner.add(DoLogTask, 'tadan').exec();
+  taskRunner.execute(DoLogTask, 'tadan');
   await taskRunner.stop();
   taskRunner.db.close();
 }

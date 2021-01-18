@@ -4,6 +4,8 @@ import DatabaseHandler, { DatabaseHandlerOptions } from './DatabaseHandler';
 import ConditionRunner from './ConditionRunner';
 import Deffered from './Deffered';
 import type GuaranteedTask from './GuaranteedTask';
+import Plan from './Plan';
+import TaskChain from './TaskChain';
 
 export type TaskRunnerOptions = {
   /** an array containing all classes that this runner gonna use */
@@ -19,17 +21,11 @@ export type TaskRunnerOptions = {
   /** delay in milliseconds to restart the task when it fails. default 10 sec. */
   taskFailureDelay?: number;
   dbOptions?: DatabaseHandlerOptions;
-};
-
-type Plan = {
-  id?: number;
-  taskName: string;
-  args: unknown;
-};
-
-type TaskChain = {
-  then: (nextTask: typeof GuaranteedTask, nextTaskArgs?: unknown) => TaskChain;
-  exec: () => Promise<void>;
+  /** Never use this option. special option for debugging and testing. */
+  debug?: {
+    /** It limits how many tasks can run per start. quota resets per stop. */
+    runLimit?: number;
+  };
 };
 
 export default class TaskRunner {
@@ -49,6 +45,10 @@ export default class TaskRunner {
 
   stopping: boolean;
 
+  startDeffer: Deffered<void>;
+
+  stopDeffer: Deffered<void>;
+
   private conditionRunner: ConditionRunner;
 
   db: DatabaseHandler;
@@ -63,6 +63,44 @@ export default class TaskRunner {
     this.taskTimeouts = new Map<unknown, NodeJS.Timeout>();
     this.running = false;
     this.stopping = false;
+    this.startDeffer = new Deffered<void>();
+    this.startDeffer.resolve();
+    this.stopDeffer = new Deffered<void>();
+    this.stopDeffer.resolve();
+
+    /// ///////////////// ///
+    //      For  debug     //
+    /// ///////////////// ///
+    if (options.debug?.runLimit) {
+      const { runLimit } = options.debug;
+      let quota = runLimit;
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const runOrig = this.run.bind(this);
+      this.run = (task) => {
+        if (quota) {
+          if (this.running) {
+            quota--;
+          }
+          // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+          // @ts-ignore
+          // eslint-disable-next-line
+          return runOrig(task);
+        }
+        return Promise.resolve();
+      };
+      // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+      // @ts-ignore
+      const stopOrig = this.stop.bind(this);
+      this.stop = async () => {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+        // @ts-ignore
+        // eslint-disable-next-line
+        await stopOrig();
+        quota = runLimit;
+      };
+      /// //////////////////
+    }
     // setup db
     this.db = new DatabaseHandler(options.dbOptions);
     // setup condtion checker
@@ -96,37 +134,39 @@ export default class TaskRunner {
   }
 
   /**
-   * Creates a task chain. You MUST call exec at the end or nothing will happen.
-   */
-  public add(
-    Task: typeof GuaranteedTask,
-    args?: unknown,
-    planList: Array<Plan> = [],
-  ): TaskChain {
-    planList.push({ taskName: Task.name, args });
-    return {
-      then: (NextTask: typeof GuaranteedTask, nextTaskArgs?: unknown) =>
-        this.add(NextTask, nextTaskArgs, planList),
-      exec: () => this.executePlan(planList),
-    };
-  }
-
-  /**
    * the last planned task gets inserted first,
    * the id and its name gets inserted with the task before it,
    * and so on
    *
-   * till the last plan which is the top parent task gets inserted with has_parent as null
+   * till the first plan which is the top parent task gets inserted with has_parent as null
    */
-  private executePlan(planList: Array<Plan>): Promise<void> {
-    if (!planList || !planList.length) {
-      throw new Error('planList is empty');
+  public execute(
+    taskChain: TaskChain | typeof GuaranteedTask,
+    args?: unknown,
+  ): Promise<void> {
+    let tasks: Array<Plan>;
+    // undefined is thrown automatically
+    if ('add' in taskChain) {
+      tasks = taskChain.items;
+    } else if (taskChain) {
+      tasks = [
+        {
+          taskName: taskChain.name,
+          args,
+        },
+      ];
+    } else {
+      throw new Error('taskChain is not of type TaskChain or GuaranteedTask');
+    }
+
+    if (!tasks) {
+      throw new Error('task list is empty');
     }
     let prevTaskId: number | null = null;
     let plan: Plan;
     do {
-      plan = planList.pop() as Plan;
-      const hasParent = planList.length !== 0;
+      plan = tasks.pop() as Plan;
+      const hasParent = tasks.length !== 0;
       const { lastInsertRowid } = this.db.insertTask(
         plan.taskName,
         plan.args ? JSON.stringify(plan.args) : null,
@@ -139,7 +179,7 @@ export default class TaskRunner {
       } else {
         plan.id = lastInsertRowid as number;
       }
-    } while (planList.length);
+    } while (tasks.length);
     const TheTask = this.Tasks.find((task) => task.name === plan.taskName);
     if (TheTask) {
       return this.run(
@@ -189,13 +229,16 @@ export default class TaskRunner {
         this.runningTasks.delete(task.id);
         currentAction.resolve();
         if (task.nextTaskId) {
-          this.taskImmediates.set(
-            task.nextTaskId,
-            setImmediate(() => {
-              // eslint-disable-next-line @typescript-eslint/no-floating-promises
-              this._runTaskId(task.nextTaskId);
-            }),
-          );
+          const { nextTaskId } = task;
+          await new Promise<void>((resolve) => {
+            this.taskImmediates.set(
+              nextTaskId,
+              setImmediate(() => {
+                // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                resolve(this._runTaskId(nextTaskId));
+              }),
+            );
+          });
         }
       } catch (err) {
         let isRemoved = false;
@@ -271,8 +314,9 @@ export default class TaskRunner {
   }
 
   private _stop(): Promise<void> {
-    if (this.stopping) return Promise.resolve();
+    if (this.stopping) return this.stopDeffer;
     this.stopping = true;
+    this.stopDeffer = new Deffered<void>();
     // clear task chain
 
     this.taskImmediates.forEach((immediate) => clearImmediate(immediate));
@@ -289,14 +333,18 @@ export default class TaskRunner {
         Promise.all(Array.from(this.runningTasks.values())).then(() => {
           this.stopping = false;
           resolve();
+          this.stopDeffer.resolve();
         });
       });
     });
   }
 
   private async _start(): Promise<void> {
-    if (this.stopping || this.running) return;
+    if (this.running) return this.startDeffer;
+    if (this.stopping) return this.stopDeffer;
     this.running = true;
+    this.startDeffer = new Deffered<void>();
+
     await Promise.all(
       this.db
         .getAllRootTasks()
@@ -324,9 +372,11 @@ export default class TaskRunner {
         )
         .map((task) => this.run(task)),
     );
+    this.startDeffer.resolve();
+    return this.startDeffer;
   }
 
-  public async start(): Promise<void> {
-    await this.conditionRunner.start();
+  public start(): Promise<void> {
+    return this.conditionRunner.start();
   }
 }

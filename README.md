@@ -75,7 +75,7 @@ class SendMailTask extends GuaranteedTask {
 
 const taskRunner = new TaskRunner({ Tasks: [SendMailTask] });
 taskRunner.start(); // don't forget to start the task runner
-taskRunner.add(SendMailTask, { to: 'example@example.com', subject: 'ehmm', text: 'nothing' }).exec(); // IMPORTANT: if you don't call exec it will do nothing
+taskRunner.execute(SendMailTask, { to: 'example@example.com', subject: 'ehmm', text: 'nothing' });
 // should log the args
 // you can also stop and close the db if you don't want to do anything anymore
 taskRunner.stop();
@@ -104,7 +104,7 @@ class SendMailTask extends GuaranteedTask {
 const taskRunner = new TaskRunner({ Tasks: [SendMailTask], dependency: mservice });
 
 taskRunner.start(); // don't forget to start the task runner
-taskRunner.add({ to: 'example@example.com', subject: 'ehmm', text: 'nothing' }).exec();
+taskRunner.execute(SendMailTask, { to: 'example@example.com', subject: 'ehmm', text: 'nothing' });
 ```
 
 and the task chain:
@@ -112,7 +112,8 @@ and the task chain:
 ```js
 const {
   GuaranteedTask,
-  TaskRunner
+  TaskRunner,
+  TaskChain,
 } = require('task-guarantee');
 
 class ChainTask extends GuaranteedTask {
@@ -126,7 +127,10 @@ class ChainTask extends GuaranteedTask {
 const taskRunner = new TaskRunner({ Task: [ChainTask] });
 
 taskRunner.start();
-taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask, 5).exec();
+taskRunner.execute(
+  new TaskChain().add(ChainTask, 1).add(ChainTask).add(ChainTask, 5)
+  // or new TaskChain(ChainTask, 1)...
+);
 // Should log :
 // 1
 // 2
@@ -137,17 +141,13 @@ taskRunner.add(ChainTask, 1).then(ChainTask).then(ChainTask, 5).exec();
 
 After calling `TaskRunner.start()`, the task runner stops and starts the task execution when condition changes internally. but if you call `TaskRunner.stop()`, the execution will stop completely and you need to call `TaskRunner.start()` to continue normally.
 
-**IMPORTANT**: always call `exec()` after adding your tasks or it will do nothing.
-
-Note that tasks added using `then()` will only execute if the tasks before it execute successfully. If **Any** of the task in the chain fails, it will not run the rest. ***And If*** one of the tasks in the chain removes it self inside the `onFailure()` of the task, the rest of the chain gets removed from db as well.
+Note that in the task chain, tasks only execute if the tasks before it execute successfully. If **Any** of the task in the chain fails, it will not run the rest. ***And If*** one of the tasks in the chain removes itself inside the `onFailure()` of the task, the rest of the chain gets removed from db as well.
 
 ## Changelogs
 
 For changelogs checkout [here](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md)
 
 ## API
-
-Since v4.0.0 is migrated to typescript, the usage should be easier. Still I give some description:
 
 ### TaskRunner (options)
 
@@ -171,7 +171,8 @@ options = {
 being async is the reason that task runner does not auto start when instantiated.
 because you may want to make sure it's ready.
 * `stop()` - stops the task runner completely. (doesn't close database)
-* `add(Task, args) => { then(Task, [args]) , exec() }` - add Task first, then call exec() at the end to insert into db and run it
+* `execute(Task, args) => Promise<void>` - add Task to db and execute
+* `execute(TaskChain) => Promise<void>` - add TaskChain to db and execute
 * `db.close()` - Closes the database connection. never call this unless you really want to get rid of the TaskRunner instance.
 
 ### GuaranteedTask
