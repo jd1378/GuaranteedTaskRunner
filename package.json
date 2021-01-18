@@ -9,7 +9,7 @@
     "test-dbg": "jest --detectOpenHandles",
     "build": "tsc",
     "lint": "eslint .",
-    "prepublishOnly": "npm test build && npm test && npm run lint",
+    "prepublishOnly": "npm run test && npm run lint && npm run build",
     "example": "node ./examples/example1.js"
   },
   "files": [
