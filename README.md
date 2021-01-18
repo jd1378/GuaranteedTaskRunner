@@ -6,6 +6,8 @@ guarantees a task (or task chain) to run
 
 You need at least node **v10** to run this. (better-sqlite3 v7 requirement)
 
+**v5.0.0***: A major change is in how tasks are executed. because it was very easy to forget calling `.exec()` after defining the task chain, I changed it. you can find the details inside examples below.
+
 Since v4.0.0, Project is migrated to typescript. but still lacks the required tests and functionality to work under cluster mode. I may add the support in future. I've tried to keep the API the way it was. but a few breaking changes were introduced. you can check in [CHANGELOG](https://github.com/jd1378/GuaranteedTaskRunner/blob/master/CHANGELOG.md)
 
 Currently there's no support for limiting how many tasks can be run at the same time, but I may add support in future.
