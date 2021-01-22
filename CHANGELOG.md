@@ -1,5 +1,9 @@
 # Changelog
 
+## 5.0.2
+
+- update better-sqlite3 version
+
 ## 5.0.0
 
 - BREAKING CHANGE: new API to use task runner, because in previous API it was easy to forget `.exec()` after adding tasks in a chain
